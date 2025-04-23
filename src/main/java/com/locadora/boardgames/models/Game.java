@@ -1,31 +1,28 @@
-package com.locadora.boardgames.model;
+package com.locadora.boardgames.models;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
-@Entity
-@Table(name = "games", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "games", uniqueConstraints = {@UniqueConstraint(columnNames = "name")})
 public class Game {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
+    @Column(nullable = false)
     private String name;
 
-    @NotBlank
     private String image;
 
-    @Min(1)
+    @Column(nullable = false)
     private Integer stockTotal;
 
-    @Min(1)
+    @Column(nullable = false)
     private Integer pricePerDay;
 }

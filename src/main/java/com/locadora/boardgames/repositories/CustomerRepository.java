@@ -1,6 +1,6 @@
-package com.locadora.boardgames.repository;
+package com.locadora.boardgames.repositories;
 
-import com.locadora.boardgames.model.Customer;
+import com.locadora.boardgames.models.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
