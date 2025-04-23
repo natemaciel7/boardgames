@@ -7,13 +7,14 @@ import com.locadora.boardgames.models.Rental;
 import com.locadora.boardgames.repositories.CustomerRepository;
 import com.locadora.boardgames.repositories.GameRepository;
 import com.locadora.boardgames.repositories.RentalRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import jakarta.transaction.Transactional;
+
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-
-import static org.springframework.http.HttpStatus.*;
 
 @Service
 public class RentalService {
@@ -34,32 +35,32 @@ public class RentalService {
 
     public Rental createRental(RentalDTO dto) {
         if (dto.daysRented() <= 0) {
-            throw new ResponseStatusException(BAD_REQUEST, "Dias inválidos");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dias inválidos");
         }
 
         Customer customer = customerRepository.findById(dto.customerId())
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Cliente não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente não encontrado"));
 
         Game game = gameRepository.findById(dto.gameId())
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Jogo não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Jogo não encontrado"));
 
         long rentedCount = rentalRepository.countByGameAndReturnDateIsNull(game);
         if (rentedCount >= game.getStockTotal()) {
-            throw new ResponseStatusException(UNPROCESSABLE_ENTITY, "Estoque esgotado");
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Estoque esgotado");
         }
 
-        Rental rental = new Rental(null, customer, game, LocalDate.now(), dto.daysRented(), null,
-                dto.daysRented() * game.getPricePerDay(), 0);
+        Rental rental = new Rental(null, customer, game, LocalDate.now(), dto.daysRented(),
+                null, dto.daysRented() * game.getPricePerDay(), 0);
 
         return rentalRepository.save(rental);
     }
 
     public Rental returnRental(Long id) {
         Rental rental = rentalRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Aluguel não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aluguel não encontrado"));
 
         if (rental.getReturnDate() != null) {
-            throw new ResponseStatusException(UNPROCESSABLE_ENTITY, "Aluguel já finalizado");
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Aluguel já finalizado");
         }
 
         LocalDate today = LocalDate.now();
@@ -72,14 +73,26 @@ public class RentalService {
         return rentalRepository.save(rental);
     }
 
+    @Transactional
     public void deleteRental(Long id) {
-        Rental rental = rentalRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Aluguel não encontrado"));
+        try {
+            Rental rental = rentalRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aluguel não encontrado"));
 
-        if (rental.getReturnDate() == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "Aluguel ainda não devolvido");
+            if (rental.getReturnDate() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aluguel ainda não foi devolvido");
+            }
+
+            rentalRepository.deleteById(id);
+        } catch (ResponseStatusException e) {
+            throw e;  
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao deletar aluguel: " + e.getMessage());
         }
-
-        rentalRepository.delete(rental);
     }
+    
 }
+
+
+
